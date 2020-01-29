@@ -8,6 +8,7 @@ function createDB {
 }
 
 function dbOperations {
+
 	select tblOperation in "create table" "show tables" "delete table" "insert into table" "back"
 		do
 			case $tblOperation in 
@@ -18,12 +19,15 @@ function dbOperations {
 				"delete table") removeTable
 				;;
 				"insert into table") echo "test insering into the table"
+
 				;;
 				"back") showDatabases
 				;;
 			esac
 		done
 }
+
+
 
 function showDatabases {
 	select operation in `ls ~/oursql`
@@ -32,6 +36,7 @@ function showDatabases {
 			dbOperations
 		done
 }
+
 
 
 
@@ -110,5 +115,4 @@ do
 		;;
 	esac
 done
-
 
