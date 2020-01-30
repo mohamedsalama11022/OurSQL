@@ -3,8 +3,14 @@
 function createDB {
 	echo Enter The DataBase Name:
 	read dbName
-	mkdir -p ~/oursql/${dbName}
-	echo "$dbName was created successfuly"
+	if test -d ~/oursql/${dbName}
+		then
+			echo "$dbName already exists"
+			createDB
+		else
+			mkdir -p ~/oursql/${dbName}
+			echo "$dbName was created successfuly"			
+	fi
 }
 
 function dbOperations {
