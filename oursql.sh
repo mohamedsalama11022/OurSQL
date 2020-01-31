@@ -3,19 +3,26 @@
 function createDB {
 	echo Enter The DataBase Name:
 	read dbName
-	if test -d ~/oursql/${dbName}
+	if test -z $dbName
 		then
-			echo "$dbName already exists"
+			echo "Database name can not be empty"
 			createDB
 		else
-			mkdir -p ~/oursql/${dbName}
-			echo "$dbName was created successfuly"			
+			if test -d ~/oursql/${dbName}
+				then
+					echo "$dbName already exists"
+					createDB
+				else
+					mkdir -p ~/oursql/${dbName}
+					echo "$dbName was created successfuly"
+					main
+			fi
 	fi
 }
 
 function dbOperations {
 
-	select tblOperation in "create table" "show tables" "delete table" "insert into table" "back"
+	select tblOperation in ".." "create table" "show tables" "delete table" "insert into table"
 		do
 			case $tblOperation in 
 				"create table") createTable
@@ -27,74 +34,89 @@ function dbOperations {
 				"insert into table") echo "test insering into the table"
 
 				;;
-				"back") showDatabases
+				"..") showDatabases
 				;;
 			esac
 		done
 }
 
-
-
 function showDatabases {
-	select operation in `ls ~/oursql`
-		do
-			echo "The database you select is ${operation}"
-			dbOperations
+	select operation in  ".." `ls ~/oursql`
+ 		do
+		 	if test -z $operation
+				then
+				echo "Unkonwn database"
+				else
+
+					if [ $operation = ".." ]
+						then
+							main
+						else
+							echo "The database you select is ${operation}"
+							dbOperations
+					fi
+			fi
 		done
 }
-
-
-
 
 function createTable {
 	echo "Enter The Table Name:"
 	read tbName
-	if [ $tbName = "." ]
-	then 
-  	dbOperations
-	else
-    touch ~/oursql/$operation/$tbName
-	touch ~/oursql/$operation/$tbName.meta
-	insertTableMeta
+	if test -z $tbName
+		then
+			echo "Table name can not be empty"
+			createTable
+		else
+			touch ~/oursql/$operation/$tbName
+			touch ~/oursql/$operation/$tbName.meta
+			insertTableMeta
 	fi
 }
 function insertTableMeta {
+	echo "Select PK column"
+	insertNewColumn
+}
+function insertNewColumn {
 	echo "Enter the column name:"
 	read colName
-	if [ $colName = "." ]
-	then
-	dbOperations
-	else 
-	echo "Enter The Column Data Type:"
-	colDataType
-fi
+	echo $colName
+	if test -z $colName
+		then
+			echo "Column name can not be empty"
+			insertNewColumn
+		else 
+			echo "Enter The Column Data Type:"
+			colDataType
+	fi
 }
 function colDataType {
 	
-	select colDatatType in "string" "integer" "float"
-
+	select datatType in "string" "integer" "float"
 	do
-		case $colDatatType in 
-		"string")
-			echo "${colName}:${colDatatType}" >> ~/oursql/$operation/$tbName.meta
-			insertTableMeta
-		;;
-		"integer")
-			echo "${colName}:${colDatatType}" >> ~/oursql/$operation/$tbName.meta
-			insertTableMeta
-		;;
-		"float")
-			echo "${colName}:${colDatatType}" >> ~/oursql/$operation/$tbName.meta
-			insertTableMeta
-		
-		;;
-		esac
+		if test -z $datatType
+			then
+				echo "Wrong data type"
+				colDataType
+			else
+				echo "${colName}:${datatType}" >> ~/oursql/$operation/$tbName.meta
+				select op in ".." "Insert new Column"
+				do
+					case $op in
+						"..")
+							dbOperations
+							;;
+						"Insert new Column")
+							insertNewColumn
+							;;
+					esac
+				done
+		fi
 	done
 }
 
 
 function showTables { 
-	ls ~/oursql/$operation  | grep "$tableName"
+	ls ~/oursql/$operation  | grep "$tableName" | grep -v ".meta$"
 	dbOperations
 }
 
@@ -105,20 +127,24 @@ function removeTable {
 	ls ~/oursql/$operation
     rm ~/oursql/$operation/$tableName.*
 	rm ~/oursql/$operation/$tableName
-
-	
+	dbOperations
 }
 
-
-select choice in "create database" "show dataBases"
-do
-	case $choice in
-		"create database")
-			createDB
+function main {
+	select choice in "create database" "show dataBases" "exit"
+	do
+		case $choice in
+			"create database")
+				createDB
+				;;
+			"show dataBases")
+				showDatabases
 			;;
-		"show dataBases")
-			showDatabases
-		;;
-	esac
-done
+			"exit")
+				exit
+			;;
+		esac
+	done
+}
 
+main
