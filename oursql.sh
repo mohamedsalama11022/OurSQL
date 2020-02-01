@@ -20,9 +20,94 @@ function createDB {
 	fi
 }
 
+function selectByPK {
+	select tbName in ".." `ls ~/oursql/$operation | grep -v ".meta$"`
+		do
+			if test ! -z $tbName && [ $tbName = ".." ]
+				then
+					echo back
+					dbOperations
+			fi
+			colName=`awk -F: '{if(NR==1){print $1}}' ~/oursql/$operation/$tbName.meta 2> /dev/null`
+			if test ! -z $colName
+				then
+					echo Enter $colName
+					
+					read val
+					while test -z $val
+						do
+							echo "value can not be empty"
+							echo Enter $colName again
+							read val
+					done
+					rowVal=`awk -F: -v val="$val" '{if(val==$1){print $0}}' ~/oursql/$operation/$tbName`
+					if test -z $rowVal
+						then
+							echo "there is no matching record"
+						else
+							colNames=`awk -F: '{print $1}' ~/oursql/$operation/$tbName.meta`
+							echo $colNames$'\n\n'$rowVal | column -t -s " :" 
+					fi
+				else
+					echo "Something went wrong"
+			fi
+			dbOperations
+		done
+}
+function deleteByPK {
+	select tbName in ".." `ls ~/oursql/$operation | grep -v ".meta$"`
+		do
+			if test ! -z $tbName && [ $tbName = ".." ]
+				then
+					echo back
+					dbOperations
+			fi
+			colName=`awk -F: '{if(NR==1){print $1}}' ~/oursql/$operation/$tbName.meta 2> /dev/null`
+			if test ! -z $colName
+				then
+					echo Enter $colName
+					
+					read val
+					while test -z $val
+						do
+							echo "value can not be empty"
+							echo Enter $colName again
+							read val
+					done
+					typeset -i num=0;
+					rowNum=`awk -F: -v val="$val" '{if(val==$1){print NR}}' ~/oursql/$operation/$tbName`
+					if test ! -z $rowNum
+						then
+							`sed -i "$rowNum d" ~/oursql/$operation/$tbName`
+							echo "Record with $colName = $val has been deleted"
+						else
+							echo "Nothing changed"
+						fi
+				else
+					echo "Something went wrong"
+			fi
+			dbOperations
+		done
+}
+
+function selectAll {
+	select tbName in ".." `ls ~/oursql/$operation | grep -v ".meta$"`
+		do
+			if test ! -z $tbName && [ $tbName = ".." ]
+				then
+					echo back
+					dbOperations
+			fi
+			colNames=`awk -F: '{print $1}' ~/oursql/$operation/$tbName.meta`
+			rows=`cat ~/oursql/$operation/$tbName`
+			echo $rows
+			echo $colNames$'\n\n'"$rows" | column -t -s " :" 
+			dbOperations
+		done
+}
 function dbOperations {
 
-	select tblOperation in ".." "create table" "show tables" "delete table" "insert into table"
+	select tblOperation in ".." "create table" "show tables" "delete table" "insert into table" "select by PK" "select All" "delete by PK"
 		do
 			case $tblOperation in 
 				"create table") createTable
@@ -35,6 +120,15 @@ function dbOperations {
 
 				;;
 				"..") showDatabases
+				;;
+				"select by PK")
+					selectByPK
+				;;
+				"select All")
+					selectAll
+				;;
+				"delete by PK")
+					deleteByPK
 				;;
 			esac
 		done
