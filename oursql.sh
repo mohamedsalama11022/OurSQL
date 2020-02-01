@@ -116,7 +116,7 @@ function dbOperations {
 				;;
 				"delete table") removeTable
 				;;
-				"insert into table") echo "test insering into the table"
+				"insert into table") validateDBdirectory
 
 				;;
 				"..") showDatabases
@@ -223,6 +223,121 @@ function removeTable {
 	rm ~/oursql/$operation/$tableName
 	dbOperations
 }
+
+function validateDBdirectory {
+	if [  "$(ls -A ~/oursql/$operation)" ]; then
+
+	ls ~/oursql/$operation  | grep "$tableName" | grep -v ".meta$"
+	echo "Enter the table name"
+
+	select tblToInsert in `ls ~/oursql/$operation  | grep "$tableName" | grep -v ".meta$"` 
+		do
+			echo "The table you select is ${tblToInsert}"
+			insertTableData
+		done
+
+else
+    echo "Sorry, $operation is Empty"
+    dbOperations
+fi
+
+
+}
+function insertTableData {
+
+	count=$(wc -l < ~/oursql/$operation/$tblToInsert.meta)
+	row=""
+for ((j=1;j<=$count;j++)){
+	echo "Enter $(awk "NR == $j" ~/oursql/$operation/$tblToInsert.meta) Value"	
+	dataType=$(awk -v x="$j" -F: 'BEGIN{}{if(NR == x){print $2}} END{}' ~/oursql/$operation/$tblToInsert.meta)
+	read tblData
+
+if [[ j -eq 1 ]];
+	 then
+		validatePriKey $tblData
+		while [[ $? -eq 1 ]]; do
+			echo "The Value is Duplicated"
+			read tblData
+			validatePriKey $tblData
+		done
+	fi
+
+	if [ $dataType == "integer" ] 
+	then
+	validataInteger $tblData
+		while [[ $? -eq 0 ]]; do
+			echo "The Value is not integer"
+			read tblData
+			validataInteger $tblData
+		done
+		if [[ $j == $count ]]; then
+			# echo -n "${tblData}" >> ~/oursql/$operation/$tblToInsert	
+			row+="${tblData}"
+		else
+			# echo -n "${tblData}:" >> ~/oursql/$operation/$tblToInsert	
+			row+="${tblData}:"
+		fi			
+elif [[ $dataType == "Float" ]];
+	then
+	validateFloat $tblData
+	while [[ $? -eq 0 ]]; do
+			echo "The Value Is Not Float"
+			read tblData
+			validateFloat $tblData
+		done
+		 if [[ $j == $count ]]; then
+			# echo -n "${tblData}" >> ~/oursql/$operation/$tblToInsert
+			row+="${tblData}"
+		else
+			# echo -n "${tblData}:" >> ~/oursql/$operation/$tblToInsert
+			row+="${tblData}:"
+		fi	
+else			
+	 	if [[ $j == $count ]]; then
+			# echo -n "${tblData}" >> ~/oursql/$operation/$tblToInsert
+			row+="${tblData}"	
+		else
+			# echo -n "${tblData}:" >> ~/oursql/$operation/$tblToInsert	
+			row+="${tblData}:"
+		fi
+fi
+
+	}
+
+	echo  $row$'\r' >> ~/oursql/$operation/$tblToInsert	
+	echo -e "Data Inserted Successfuly"
+
+}
+
+
+function validatePriKey {
+	priKeyValue=$(awk -v y="$1" -F: 'BEGIN{}{if($1 == y){print $1}} END{}' ~/oursql/$operation/$tblToInsert)
+
+
+	if  [[ $priKeyValue == $1 ]]; then
+	 	
+		return 1;
+	else
+	
+		return 0;
+	fi
+}
+	function validataInteger {
+		if [[ $1 =~ ^[+-]?[0-9]+$ ]]; 
+		then
+		return 1
+	else
+		return 0
+		fi
+	}
+function validateFloat {
+	if [[ $1 =~ ^[+-]?[0-9]+\.?[0-9]*$ ]];
+	then
+	return 1
+else
+	return 0
+	fi
+}	
 
 function main {
 	select choice in "create database" "show dataBases" "exit"
