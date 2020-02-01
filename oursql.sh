@@ -1,28 +1,14 @@
 #!/bin/bash
 
 function createDB {
-	echo Enter The DataBase Name:
+	echo -e "Enter The DataBase Name:"
 	read dbName
-	if test -z $dbName
-		then
-			echo "Database name can not be empty"
-			createDB
-		else
-			if test -d ~/oursql/${dbName}
-				then
-					echo "$dbName already exists"
-					createDB
-				else
-					mkdir -p ~/oursql/${dbName}
-					echo "$dbName was created successfuly"
-					main
-			fi
-	fi
+	mkdir -p ~/oursql/${dbName}
+	echo -e "$dbName was created successfuly"
 }
 
 function dbOperations {
-
-	select tblOperation in ".." "create table" "show tables" "delete table" "insert into table"
+	select tblOperation in "create table" "show tables" "delete table" "insert into table" "back"
 		do
 			case $tblOperation in 
 				"create table") createTable
@@ -31,92 +17,73 @@ function dbOperations {
 				;;
 				"delete table") removeTable
 				;;
-				"insert into table") echo "test insering into the table"
-
+				"insert into table") validateDBdirectory
 				;;
-				"..") showDatabases
+				"back") showDatabases
 				;;
 			esac
 		done
 }
 
 function showDatabases {
-	select operation in  ".." `ls ~/oursql`
- 		do
-		 	if test -z $operation
-				then
-				echo "Unkonwn database"
-				else
-
-					if [ $operation = ".." ]
-						then
-							main
-						else
-							echo "The database you select is ${operation}"
-							dbOperations
-					fi
-			fi
+	select operation in `ls ~/oursql`
+		do
+			echo "The database you select is ${operation}"
+			dbOperations
 		done
 }
+
+
 
 function createTable {
 	echo "Enter The Table Name:"
 	read tbName
-	if test -z $tbName
-		then
-			echo "Table name can not be empty"
-			createTable
-		else
-			touch ~/oursql/$operation/$tbName
-			touch ~/oursql/$operation/$tbName.meta
-			insertTableMeta
+	if [ $tbName = "." ]
+	then 
+  	dbOperations
+	else
+    touch ~/oursql/$operation/$tbName
+	touch ~/oursql/$operation/$tbName.meta
+	insertTableMeta
 	fi
 }
 function insertTableMeta {
-	echo "Select PK column"
-	insertNewColumn
-}
-function insertNewColumn {
 	echo "Enter the column name:"
 	read colName
-	echo $colName
-	if test -z $colName
-		then
-			echo "Column name can not be empty"
-			insertNewColumn
-		else 
-			echo "Enter The Column Data Type:"
-			colDataType
-	fi
+	if [ $colName = "." ]
+	then
+	dbOperations
+	else 
+	echo "Enter The Column Data Type:"
+	colDataType
+fi
 }
 function colDataType {
 	
-	select datatType in "string" "integer" "float"
+	select colDatatType in "string" "integer" "float"
+
 	do
-		if test -z $datatType
-			then
-				echo "Wrong data type"
-				colDataType
-			else
-				echo "${colName}:${datatType}" >> ~/oursql/$operation/$tbName.meta
-				select op in ".." "Insert new Column"
-				do
-					case $op in
-						"..")
-							dbOperations
-							;;
-						"Insert new Column")
-							insertNewColumn
-							;;
-					esac
-				done
-		fi
+		case $colDatatType in 
+		"string")
+			echo "${colName}:${colDatatType}" >> ~/oursql/$operation/$tbName.meta
+			insertTableMeta
+		;;
+		"integer")
+			echo "${colName}:${colDatatType}" >> ~/oursql/$operation/$tbName.meta
+			insertTableMeta
+		;;
+		"float")
+			echo "${colName}:${colDatatType}" >> ~/oursql/$operation/$tbName.meta
+			insertTableMeta
+		
+		;;
+		esac
 	done
 }
 
 
 function showTables { 
-	ls ~/oursql/$operation  | grep "$tableName" | grep -v ".meta$"
+	ls ~/oursql/$operation  | grep "$tbName" | grep -v ".meta$"
 	dbOperations
 }
 
@@ -124,27 +91,149 @@ function removeTable {
 	ls ~/oursql/$operation  
 	echo "Enter the table name"
 	read tableName
+	if [ $tableName = "." ]
+	then
+	dbOperations
+	else 
 	ls ~/oursql/$operation
-    rm ~/oursql/$operation/$tableName.*
+    rm ~/oursql/$operation/$tableName.meta
 	rm ~/oursql/$operation/$tableName
 	dbOperations
+fi
+	
+
+	
 }
 
-function main {
-	select choice in "create database" "show dataBases" "exit"
-	do
-		case $choice in
-			"create database")
-				createDB
-				;;
-			"show dataBases")
-				showDatabases
-			;;
-			"exit")
-				exit
-			;;
-		esac
-	done
+
+test -z varName
+function validateDBdirectory {
+	if [  "$(ls -A ~/oursql/$operation)" ]; then
+
+	ls ~/oursql/$operation  | grep "$tableName" | grep -v ".meta$"
+	echo "Enter the table name"
+
+	select tblToInsert in `ls ~/oursql/$operation  | grep "$tableName" | grep -v ".meta$"` 
+		do
+			echo "The table you select is ${tblToInsert}"
+			insertTableData
+		done
+
+else
+    echo "Sorry, $operation is Empty"
+    dbOperations
+fi
+
+
 }
 
-main
+function insertTableData {
+
+	count=$(wc -l < ~/oursql/$operation/$tblToInsert.meta)
+	row=""
+for ((j=1;j<=$count;j++)){
+	echo "Enter $(awk "NR == $j" ~/oursql/$operation/$tblToInsert.meta) Value"	
+	dataType=$(awk -v x="$j" -F: 'BEGIN{}{if(NR == x){print $2}} END{}' ~/oursql/$operation/$tblToInsert.meta)
+	read tblData
+
+if [[ j -eq 1 ]];
+	 then
+		validatePriKey $tblData
+		while [[ $? -eq 1 ]]; do
+			echo "The Value is Duplicated"
+			read tblData
+			validatePriKey $tblData
+		done
+	fi
+
+	if [ $dataType == "integer" ] 
+	then
+	validataInteger $tblData
+		while [[ $? -eq 0 ]]; do
+			echo "The Value is not integer"
+			read tblData
+			validataInteger $tblData
+		done
+		if [[ $j == $count ]]; then
+			# echo -n "${tblData}" >> ~/oursql/$operation/$tblToInsert	
+			row+="${tblData}"
+		else
+			# echo -n "${tblData}:" >> ~/oursql/$operation/$tblToInsert	
+			row+="${tblData}:"
+		fi			
+elif [[ $dataType == "Float" ]];
+	then
+	validateFloat $tblData
+	while [[ $? -eq 0 ]]; do
+			echo "The Value Is Not Float"
+			read tblData
+			validateFloat $tblData
+		done
+		 if [[ $j == $count ]]; then
+			# echo -n "${tblData}" >> ~/oursql/$operation/$tblToInsert
+			row+="${tblData}"
+		else
+			# echo -n "${tblData}:" >> ~/oursql/$operation/$tblToInsert
+			row+="${tblData}:"
+		fi	
+else			
+	 	if [[ $j == $count ]]; then
+			# echo -n "${tblData}" >> ~/oursql/$operation/$tblToInsert
+			row+="${tblData}"	
+		else
+			# echo -n "${tblData}:" >> ~/oursql/$operation/$tblToInsert	
+			row+="${tblData}:"
+		fi
+fi
+
+	}
+
+	echo  $row$'\r' >> ~/oursql/$operation/$tblToInsert	
+	echo -e "Data Inserted Successfuly"
+
+}
+
+
+function validatePriKey {
+	priKeyValue=$(awk -v y="$1" -F: 'BEGIN{}{if($1 == y){print $1}} END{}' ~/oursql/$operation/$tblToInsert)
+
+
+	if  [[ $priKeyValue == $1 ]]; then
+	 	
+		return 1;
+	else
+	
+		return 0;
+	fi
+}
+	function validataInteger {
+		if [[ $1 =~ ^[+-]?[0-9]+$ ]]; 
+		then
+		return 1
+	else
+		return 0
+		fi
+	}
+function validateFloat {
+	if [[ $1 =~ ^[+-]?[0-9]+\.?[0-9]*$ ]];
+	then
+	return 1
+else
+	return 0
+	fi
+}	
+
+
+select choice in "create database" "show dataBases"
+do
+	case $choice in
+		"create database")
+			createDB
+			;;
+		"show dataBases")
+			showDatabases
+		;;
+	esac
+done
+
+
