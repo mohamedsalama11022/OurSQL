@@ -386,6 +386,7 @@ function validatePriKey {
 		return 0; #notExists
 	fi
 }
+function validateColName {
 	echo $tbName
 
     validation=$(awk -v y="$1" -F: 'BEGIN{}{if($1 == y){print $1}} END{}' ~/oursql/$operation/$tbName.meta)
