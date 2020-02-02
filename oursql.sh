@@ -107,7 +107,7 @@ function selectAll {
 }
 function dbOperations {
 
-	select tblOperation in ".." "create table" "show tables" "delete table" "insert into table" "select by PK" "select All" "delete by PK"
+	select tblOperation in ".." "create table" "show tables" "delete table" "insert into table" "select by PK" "select All" "delete by PK" "update record"
 		do
 			case $tblOperation in 
 				"create table") createTable
@@ -129,6 +129,8 @@ function dbOperations {
 				;;
 				"delete by PK")
 					deleteByPK
+				;;
+				"update record") validateDBdirectory
 				;;
 			esac
 		done
@@ -167,13 +169,20 @@ function createTable {
 	fi
 }
 function insertTableMeta {
-	echo "Select PK column"
-	insertNewColumn
+	echo "Enter PK column"
+	insertNewColumn	
 }
+
 function insertNewColumn {
 	echo "Enter the column name:"
 	read colName
-	echo $colName
+	# echo $colName
+	validateColName $colName
+	while [[ $? -eq 1 ]]; do
+		echo "Sorry, Column Name Can't Be Duplicayed"
+		read colName
+		validateColName $colName
+	done
 	if test -z $colName
 		then
 			echo "Column name can not be empty"
@@ -233,7 +242,11 @@ function validateDBdirectory {
 	select tblToInsert in `ls ~/oursql/$operation  | grep "$tableName" | grep -v ".meta$"` 
 		do
 			echo "The table you select is ${tblToInsert}"
-			insertTableData
+			if [[ $tblOperation == "insert into table" ]]; then
+				insertTableData
+			else
+				updateRecored
+			fi
 		done
 
 else
@@ -251,17 +264,15 @@ for ((j=1;j<=$count;j++)){
 	echo "Enter $(awk "NR == $j" ~/oursql/$operation/$tblToInsert.meta) Value"	
 	dataType=$(awk -v x="$j" -F: 'BEGIN{}{if(NR == x){print $2}} END{}' ~/oursql/$operation/$tblToInsert.meta)
 	read tblData
-
-if [[ j -eq 1 ]];
+	if [[ j -eq 1 ]];
 	 then
-		validatePriKey $tblData
+	 	validatePriKey $tblData
 		while [[ $? -eq 1 ]]; do
 			echo "The Value is Duplicated"
 			read tblData
 			validatePriKey $tblData
-		done
-	fi
-
+		done	
+fi
 	if [ $dataType == "integer" ] 
 	then
 	validataInteger $tblData
@@ -271,10 +282,8 @@ if [[ j -eq 1 ]];
 			validataInteger $tblData
 		done
 		if [[ $j == $count ]]; then
-			# echo -n "${tblData}" >> ~/oursql/$operation/$tblToInsert	
 			row+="${tblData}"
 		else
-			# echo -n "${tblData}:" >> ~/oursql/$operation/$tblToInsert	
 			row+="${tblData}:"
 		fi			
 elif [[ $dataType == "Float" ]];
@@ -286,18 +295,14 @@ elif [[ $dataType == "Float" ]];
 			validateFloat $tblData
 		done
 		 if [[ $j == $count ]]; then
-			# echo -n "${tblData}" >> ~/oursql/$operation/$tblToInsert
 			row+="${tblData}"
 		else
-			# echo -n "${tblData}:" >> ~/oursql/$operation/$tblToInsert
 			row+="${tblData}:"
 		fi	
 else			
 	 	if [[ $j == $count ]]; then
-			# echo -n "${tblData}" >> ~/oursql/$operation/$tblToInsert
 			row+="${tblData}"	
 		else
-			# echo -n "${tblData}:" >> ~/oursql/$operation/$tblToInsert	
 			row+="${tblData}:"
 		fi
 fi
@@ -306,21 +311,95 @@ fi
 
 	echo  $row$'\r' >> ~/oursql/$operation/$tblToInsert	
 	echo -e "Data Inserted Successfuly"
-
+	dbOperations
 }
+
+function updateRecored {
+	metaRows=$(awk '{print}' ~/oursql/$operation/$tblToInsert.meta)
+	echo "Enter The Primary Key of The Row"
+	read updatePriKey
+	validatePriKey $updatePriKey
+	while [[ $? -eq 0 ]]; do
+			echo "Sorry, THe Primary Key Is Not Exists"
+			read updatePriKey
+			validatePriKey $updatePriKey
+		done	
+	 PS1="Enter The Field You Want To Update It's Value: "
+	select metaValues in $metaRows
+	do
+		# echo "selected character : $metaValues"
+		# echo "selected number is : $REPLY"
+		updateDataType=$(awk -v x="$REPLY" -F: 'BEGIN{}{if(NR == x){print $2}} END{}' ~/oursql/$operation/$tblToInsert.meta)
+		echo $updateDataType
+		echo "Enter The Value You Want To Update: "
+		read valToUpdate
+		echo "The Reply is"$REPLY
+		 if [[ $REPLY -eq 1 ]]; then
+		 	validatePriKey $valToUpdate
+		 	while [[ $? -eq 1 ]]; do
+		 			echo "Duplicated"
+		 			read valToUpdate
+		 			validatePriKey $valToUpdate
+		 		done
+		fi
+	
+		 if [[ $updateDataType == "integer" ]]; then
+		 	validataInteger $valToUpdate
+		 	while [[ $? -eq 0 ]]; do
+		 		echo "the value is not integer"
+		 		read valToUpdate
+		 		validataInteger $valToUpdate
+		 	done
+		 elif [[ $updateDataType == "float"  ]]; then
+		 		validateFloat $valToUpdate	
+		 		while [[ $? -eq 0 ]]; do
+		 		echo "the value is not float"
+		 		read valToUpdate
+		 		validateFloat $valToUpdate
+		 	done
+		 fi
+		
+		 theOldValue=$(awk -F: -v x=$REPLY 'BEGIN{}{if(NR == x){print $2}} END{}' ~/oursql/$operation/$tblToInsert)
+		# echo $REPLY
+		id="$updatePriKey"
+		 theField="$REPLY"
+		 content=$(awk -F: -v x="$id" -v y="$theField" -v val="$valToUpdate" 'BEGIN{OFS=":";ORS=""} {if($1==x){for(i=1;i<=NF;i++){if(i==y){print val}else{print $i};if(NF!=i){print ":"}};print "\n"}else{print $0"\n"}}' ~/oursql/testdb/student)
+		 url=~/oursql/$operation/$tblToInsert
+		 echo "$content" > "$url"
+		 echo "Data Updated Successfuly!"
+		 dbOperations
+	done
+	
+}
+
 
 
 function validatePriKey {
 	priKeyValue=$(awk -v y="$1" -F: 'BEGIN{}{if($1 == y){print $1}} END{}' ~/oursql/$operation/$tblToInsert)
-
-
+	echo $1
+	echo $priKeyValue 
 	if  [[ $priKeyValue == $1 ]]; then
 	 	
-		return 1;
+		return 1; #exists
 	else
 	
-		return 0;
+		return 0; #notExists
 	fi
+}
+	echo $tbName
+
+    validation=$(awk -v y="$1" -F: 'BEGIN{}{if($1 == y){print $1}} END{}' ~/oursql/$operation/$tbName.meta)
+    	if  [[ $validation == $1 ]]; then
+	 		echo exists
+			return 1; #exists
+		else
+			echo "does not exist"
+	
+			return 0;
+		
+	fi
+	echo $tbName
+	
 }
 	function validataInteger {
 		if [[ $1 =~ ^[+-]?[0-9]+$ ]]; 
