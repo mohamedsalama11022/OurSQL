@@ -22,7 +22,7 @@ function createTable {
 		break
 	done
 		
-		rm ~/oursql/$operation/.temp
+		rm ~/oursql/$operation/.temp 2> /dev/null
 		touch ~/oursql/$operation/.temp
 		insertTableMeta	
 }
@@ -59,7 +59,7 @@ function insertNewColumn {
 
 }
 function colDataType {
-	select datatType in "string" "integer" "float"
+	select datatType in "string" "integer" "float" "date"
 	do
 		if test -z $datatType
 			then

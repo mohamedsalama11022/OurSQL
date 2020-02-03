@@ -152,6 +152,14 @@ function insertTableData {
 						echo "Sorry, INvalid Format"
 						continue
 					fi
+
+				elif [[ $dataType == "date" ]]; then
+					validateDate $tblData	
+					if [[ $? -eq 0 ]]; then
+	 				echo "Not Valid Date:This Is The Right Format dd/mm/yyyy"
+					continue
+					fi
+
 				fi
 				break
 			done
@@ -215,12 +223,17 @@ function updateRecored {
 						echo "Sorry, INvalid Format"
 						continue
 					fi
-				
+
+			elif [[ $updateDataType == "date" ]]; then
+					validateDate $valToUpdate
+					if [[ $? -eq 0 ]]; then
+						echo "Not Valid Date:This Is The Right Format dd/mm/yyyy"
+						continue
+					fi
 			fi
 			break
 		done
 		 theOldValue=$(awk -F: -v x=$REPLY 'BEGIN{}{if(NR == x){print $2}} END{}' ~/oursql/$operation/$tblToInsert)
-		# echo $REPLY
 		id="$updatePriKey"
 		 theField="$REPLY"
 		 content=$(awk -F: -v x="$id" -v y="$theField" -v val="$valToUpdate" 'BEGIN{OFS=":";ORS=""} {if($1==x){for(i=1;i<=NF;i++){if(i==y){print val}else{print $i};if(NF!=i){print ":"}};print "\n"}else{print $0"\n"}}' ~/oursql/$operation/$tblToInsert)
@@ -259,3 +272,12 @@ function validateFloat {
 	return 0
 	fi
 }	
+function validateDate {
+
+	date "+%d/%m/%Y" -d "$1" > /dev/null  2>&1
+	if [[ $? -ne 0 ]]; then
+		return 0 #notValidaDate
+	else
+		return 1 #validDate		
+	fi
+}
