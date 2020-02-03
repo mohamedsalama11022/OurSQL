@@ -2,21 +2,53 @@
 
 function createDB {
 	echo Enter The DataBase Name:
-	read dbName
-	if test -z $dbName
-		then
-			echo "Database name can not be empty"
-			createDB
-		else
-			if test -d ~/oursql/${dbName}
-				then
-					echo "$dbName already exists"
-					createDB
-				else
-					mkdir -p ~/oursql/${dbName}
-					echo "$dbName was created successfuly"
-					main
-			fi
+	# read dbName
+	# if test -z $dbName
+	# 	then
+	# 		echo "Database name can not be empty"
+	# 		createDB
+	# 	else
+	# 		if test -d ~/oursql/${dbName}
+	# 			then
+	# 				echo "$dbName already exists"
+	# 				createDB
+	# 			else
+	# 				mkdir -p ~/oursql/${dbName}
+	# 				echo "$dbName was created successfuly"
+	# 				main
+	# 		fi
+	# fi
+	while  true ; do
+		read dbName
+		echo $dbName
+			if test -z "$dbName"
+			then
+				echo "Database name can not be empty"
+				continue
+		fi
+		if [[ ! $dbName  =~ ^[a-zA-Z_]+[a-zA-Z]+[0-9a-zA-Z_]*$ ]]; then
+				echo "Sorry, INvalid Format"
+				continue
+		fi
+
+		validateDBExist  ~/oursql/$dbName
+		if [[  $? -eq 1  ]]; then
+				echo "Sorry, The Database Exists"
+				continue
+		fi
+	
+		break
+	done
+	mkdir -p ~/oursql/${dbName}
+	echo "$dbName was created successfuly"
+	main
+}
+function validateDBExist {
+	echo $1
+	if  test -d $1 ; then
+		return 1 #exists
+	else 
+	return 0 #not
 	fi
 }
 
@@ -157,17 +189,48 @@ function showDatabases {
 
 function createTable {
 	echo "Enter The Table Name:"
-	read tbName
-	if test -z $tbName
-		then
-			echo "Table name can not be empty"
-			createTable
-		else
+	while  true ; do
+		read tbName
+		echo $tbName
+			if test -z "$tbName"
+			then
+				echo "Table name can not be empty"
+				continue
+		fi
+		if [[ ! $tbName  =~ ^[a-zA-Z_]+[a-zA-Z]+[0-9a-zA-Z_]*$ ]]; then
+				echo "Sorry, INvalid Format"
+				continue
+		fi
+
+		validateTableExist  ~/oursql/$operation/$tbName
+		if [[  $? -eq 1  ]]; then
+				echo "Sorry, The Table Is Exists"
+				continue
+		fi
+	
+		break
+	done
+		
 			touch ~/oursql/$operation/$tbName
 			touch ~/oursql/$operation/$tbName.meta
 			insertTableMeta
+	
+}
+function validateTableExist {
+	echo $1
+	if  test -f $1 ; then
+		return 1 #exists
+	else 
+	return 0 #not
 	fi
 }
+# function validateRejex {
+# 	if [[ $1 =~ ^[a-zA-Z_]+[a-zA-Z]+[0-9a-zA-Z_]*$ ]]; then
+# 			return 1 #"matches"
+# 		else 
+# 			return 0 #"notMatches"
+# 	fi
+# }
 function insertTableMeta {
 	echo "Enter PK column"
 	insertNewColumn	
@@ -175,22 +238,46 @@ function insertTableMeta {
 
 function insertNewColumn {
 	echo "Enter the column name:"
-	read colName
+	# read colName
 	# echo $colName
 	validateColName $colName
-	while [[ $? -eq 1 ]]; do
-		echo "Sorry, Column Name Can't Be Duplicayed"
+		while  true ; do
 		read colName
+		echo $colName
+			if test -z "$colName"
+			then
+				echo "Column name can not be empty"
+				continue
+		fi
+		if [[ ! $colName  =~ ^[a-zA-Z_]+[a-zA-Z]+[0-9a-zA-Z_]*$ ]]; then
+				echo "Sorry, INvalid Format"
+				continue
+		fi
+
 		validateColName $colName
+		if [[  $? -eq 1  ]]; then
+				echo "Sorry, Column Name Can't Be Duplicayed"
+				continue
+		fi
+	
+		break
 	done
-	if test -z $colName
-		then
-			echo "Column name can not be empty"
-			insertNewColumn
-		else 
-			echo "Enter The Column Data Type:"
-			colDataType
-	fi
+	echo "Enter The Column Data Type:"
+	colDataType
+
+	# while [[ $? -eq 1 ]]; do
+	# 	echo "Sorry, Column Name Can't Be Duplicayed"
+	# 	read colName
+	# 	validateColName $colName
+	# done
+	# if test -z $colName
+	# 	then
+	# 		echo "Column name can not be empty"
+	# 		insertNewColumn
+	# 	else 
+	# 		echo "Enter The Column Data Type:"
+	# 		colDataType
+	# fi
 }
 function colDataType {
 	
