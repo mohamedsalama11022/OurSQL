@@ -170,11 +170,12 @@ function insertTableData {
 			fi		
 		}
 
-		echo  $row$'\r' >> ~/oursql/$operation/$tblToInsert	
+		echo $row  >> ~/oursql/$operation/$tblToInsert	
 		echo -e "Data Inserted Successfuly"
 		dbOperations
 }
 function updateRecored {
+	# selectAll
 	metaRows=$(awk '{print}' ~/oursql/$operation/$tblToInsert.meta)
 	echo "Enter The Primary Key of The Row"
 	read updatePriKey
@@ -184,7 +185,7 @@ function updateRecored {
 			read updatePriKey
 			validatePriKey $updatePriKey
 		done	
-	 PS1="Enter The Field You Want To Update It's Value: "
+	 echo "Enter The Field You Want To Update It's Value: "
 	select metaValues in $metaRows
 	do
 		updateDataType=$(awk -v x="$REPLY" -F: 'BEGIN{}{if(NR == x){print $2}} END{}' ~/oursql/$operation/$tblToInsert.meta)
@@ -223,17 +224,17 @@ function updateRecored {
 						echo "Sorry, INvalid Format"
 						continue
 					fi
-
 			elif [[ $updateDataType == "date" ]]; then
-					validateDate $valToUpdate
-					if [[ $? -eq 0 ]]; then
-						echo "Not Valid Date:This Is The Right Format dd/mm/yyyy"
-						continue
-					fi
+						validateDate $valToUpdate
+						if [[ $? -eq 0 ]]; then
+							echo "Not Valid Date:This Is The Right Format dd/mm/yyyy"
+							continue
+					fi	
 			fi
 			break
 		done
 		 theOldValue=$(awk -F: -v x=$REPLY 'BEGIN{}{if(NR == x){print $2}} END{}' ~/oursql/$operation/$tblToInsert)
+		# echo $REPLY
 		id="$updatePriKey"
 		 theField="$REPLY"
 		 content=$(awk -F: -v x="$id" -v y="$theField" -v val="$valToUpdate" 'BEGIN{OFS=":";ORS=""} {if($1==x){for(i=1;i<=NF;i++){if(i==y){print val}else{print $i};if(NF!=i){print ":"}};print "\n"}else{print $0"\n"}}' ~/oursql/$operation/$tblToInsert)
@@ -272,12 +273,22 @@ function validateFloat {
 	return 0
 	fi
 }	
-function validateDate {
+# function validateDate {
 
-	date "+%d/%m/%Y" -d "$1" > /dev/null  2>&1
-	if [[ $? -ne 0 ]]; then
-		return 0 #notValidaDate
-	else
-		return 1 #validDate		
+# 	date "+%d/%m/%Y" -d "$1" > /dev/null  #2>&1
+# 	if [[ $? -ne 0 ]]; then
+# 		return 0 #notValidaDate
+# 		# echo "NotvalidDate"
+# 	else
+# 		return 1 #validDate
+# 		# echo "Valid Date"
+# 	fi
+# }
+function validateDate {
+	if [[ $1 =~ ^[0-9]{2}/[0-9]{2}/[0-9]{4}$ ]]; 
+	then
+	return 1	
+	else 
+	return 0
 	fi
 }

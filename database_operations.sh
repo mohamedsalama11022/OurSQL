@@ -85,3 +85,23 @@ function dbOperations {
 			esac
 		done
 }
+
+function deleteDB {
+	select operation in  ".." `ls ~/oursql`
+ 		do
+		 	if test -z $operation
+				then
+				echo "Unkonwn database"
+				else
+
+					if [ $operation = ".." ]
+						then
+							main
+						else
+							rm -r ~/oursql/$operation
+							echo "${operation} database was deleted successfuly"
+							main
+					fi
+			fi
+		done
+}

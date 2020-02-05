@@ -28,11 +28,14 @@ function showTables {
 }
 
 function main {
-	select choice in "create database" "show dataBases" "exit"
+	select choice in "create database" "show dataBases" "delete database" "exit"
 	do
 		case $choice in
 			"create database")
 				createDB
+				;;
+			"delete database")
+				deleteDB
 				;;
 			"show dataBases")
 				showDatabases
